@@ -6,6 +6,9 @@ https://hobqs726w8.execute-api.eu-west-1.amazonaws.com/v1/validate/BE68539007547
 
 The Swagger defintion is available [here](./swagger.yaml)
 
+Postman example:
+![](./docs/img/postman-example.png)
+
 
 ## Getting started
 
