@@ -1,0 +1,45 @@
+---
+swagger: "2.0"
+info:
+  version: "v0.1"
+  title: "Serverless iban service - alpha"
+basePath: "/v1"
+schemes:
+- "https"
+paths:
+  /validate/{iban}:
+    get:
+      operationId: "validateIban"
+      produces:
+      - "application/json"
+      parameters:
+      - name: "iban"
+        in: "path"
+        required: true
+        type: "string"
+      responses:
+        200:
+          description: "200 response"
+          schema:
+            $ref: "#/definitions/ValidationObject"
+        500:
+          description: "500 response"
+      x-amazon-apigateway-request-validator: "body-and-params"
+      x-amazon-apigateway-integration:
+        uri:
+          "Fn::Sub": "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${FnIbanApi.Arn}/invocations"
+        httpMethod: POST
+        type: aws_proxy
+
+definitions:
+  ValidationObject:
+    type: "object"
+    required:
+    - "valid"
+    properties:
+      valid:
+        type: "boolean"
+x-amazon-apigateway-request-validators:
+  body-and-params:
+    validateRequestParameters: true
+    validateRequestBody: true

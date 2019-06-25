@@ -1,0 +1,79 @@
+AWSTemplateFormatVersion: 2010-09-09
+Transform:
+- AWS::Serverless-2016-10-31
+
+Globals:
+  Function:
+    AutoPublishAlias: live
+
+Parameters:
+  Stage:
+    Description: The name for a project pipeline stage, such as Staging or Prod, for
+      which resources are provisioned and deployed.
+    Type: String
+
+
+Resources:
+
+  # -------------------------------------------
+  # API Management layer
+  # -------------------------------------------
+  IbanAPI:
+    Type: AWS::Serverless::Api
+    Properties:
+      StageName: !Sub ${ApiVersionMayor}
+      EndpointConfiguration: REGIONAL
+      DefinitionBody:
+        Fn::Transform:
+          Name: AWS::Include
+          Parameters:
+            Location: swagger.yaml
+      MethodSettings:
+
+        # Stage settings for all resources/methods
+        - ResourcePath: "/*"
+          HttpMethod: "*"
+          ThrottlingBurstLimit: 5
+          ThrottlingRateLimit: 4
+          CachingEnabled: false
+          DataTraceEnabled: true
+          LoggingLevel: ERROR
+          MetricsEnabled: true
+
+  # -------------------------------------------
+  # Functions
+  # -------------------------------------------
+  FnIbanApi:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ./lambda/fn-ibanvalidator
+      Handler: index.handler
+      MemorySize: 128
+      Runtime: nodejs8.10
+      Timeout: 300
+      Environment:
+        Variables:
+          Stage: !Sub ${Stage}
+      Tags:
+        Confidential: false
+        Stage: !Sub ${Stage}
+      Events:
+        IbanAPI:
+          Type: Api
+          Properties:
+            Method: ANY
+            Path: /
+            RestApiId: !Ref IbanAPI
+
+  # -------------------------------------------
+  # IAM
+  # -------------------------------------------
+
+  FnIbanApiInvokePermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref FnIbanApi
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn:
+        !Sub arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${IbanAPI}/*
